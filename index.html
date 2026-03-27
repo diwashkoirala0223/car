@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DriveSense AI — Real-time adaptive driver fatigue and attention monitoring system. Predicts drowsiness before it becomes dangerous.">
+  <title>DriveSense AI — Driver Fatigue Monitor</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ═══════ HEADER ═══════ -->
+    <header class="header">
+      <div class="header__brand">
+        <div class="header__logo">🧠</div>
+        <div>
+          <div class="header__title">DriveSense AI</div>
+          <div class="header__subtitle">Adaptive Driver Fatigue Monitor</div>
+        </div>
+      </div>
+
+      <div class="header__controls">
+        <div id="status-dot" class="status-dot"></div>
+
+        <select id="scenario-select" class="select" aria-label="Select driving scenario"></select>
+
+        <div class="speed-control">
+          <button class="speed-btn active" data-speed="1" title="1x speed">1×</button>
+          <button class="speed-btn" data-speed="2" title="2x speed">2×</button>
+          <button class="speed-btn" data-speed="5" title="5x speed">5×</button>
+          <button class="speed-btn" data-speed="10" title="10x speed">10×</button>
+        </div>
+
+        <button id="btn-camera" class="btn btn--primary" title="Start WebCam Face Tracking">📷 Start Camera</button>
+        <button id="btn-play-pause" class="btn" title="Pause/Resume simulation">⏸ Pause</button>
+        <button id="btn-reset" class="btn btn--danger" title="Reset simulation">↻ Reset</button>
+
+        <div id="header-clock" class="header__clock">11:00 PM</div>
+      </div>
+    </header>
+
+    <!-- ═══════ SCENARIO INFO ═══════ -->
+    <div id="scenario-info" class="scenario-info">
+      <strong>🌙 Night Highway:</strong> Long stretch of highway at 11 PM. Low traffic, monotonous road.
+    </div>
+
+    <!-- ═══════ DASHBOARD GRID ═══════ -->
+    <div class="dashboard">
+
+      <!-- ─── LEFT: Driver Monitor ─── -->
+      <div class="driver-panel">
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Driver Monitor</span>
+            <span id="state-badge" class="card__badge safe">Excellent</span>
+          </div>
+          <div class="face-monitor" style="position: relative;">
+            <video id="webcam-video" style="display:none;" playsinline></video>
+            <canvas id="face-canvas" class="face-canvas" width="280" height="280"></canvas>
+            <div id="camera-loading" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); padding: 8px 16px; background: rgba(0,0,0,0.8); border-radius: 8px; font-size: 0.8rem; font-weight: bold;">Initializing Camera...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Biometric Metrics</span>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric__label">PERCLOS</div>
+              <div id="metric-perclos" class="metric__value safe">0.0%</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Blink Rate</div>
+              <div id="metric-blinks" class="metric__value safe">15/min</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Head Yaw</div>
+              <div id="metric-head" class="metric__value safe">0°</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Yawns (5m)</div>
+              <div id="metric-yawns" class="metric__value safe">0</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Speed</div>
+              <div id="metric-speed" class="metric__value safe">0 km/h</div>
+            </div>
+            <div class="metric">
+              <div class="metric__label">Lane Drift</div>
+              <div id="metric-lane" class="metric__value safe">0.00m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── CENTER: Score + Charts ─── -->
+      <div class="center-panel">
+
+        <!-- Safety Score -->
+        <div class="card score-display">
+          <div class="score-gauge">
+            <canvas id="score-gauge-canvas"></canvas>
+            <div class="score-gauge__value">
+              <div id="score-number" class="score-gauge__number" style="color: #00e676;">100</div>
+              <div id="score-letter" class="score-gauge__letter" style="color: #00e676;">Grade: A — Excellent</div>
+            </div>
+          </div>
+          <div class="score-details">
+            <div class="score-detail-row">
+              <span class="score-detail-row__label">Eye Closure (PERCLOS)</span>
+              <span id="comp-val-0" class="score-detail-row__value" style="color:#00e676">100%</span>
+              <div class="score-detail-row__bar"><div id="comp-bar-0" class="score-detail-row__bar-fill" style="width:100%;background:#00e676"></div></div>
+            </div>
+            <div class="score-detail-row">
+              <span class="score-detail-row__label">Blink Pattern</span>
+              <span id="comp-val-1" class="score-detail-row__value" style="color:#00e676">100%</span>
+              <div class="score-detail-row__bar"><div id="comp-bar-1" class="score-detail-row__bar-fill" style="width:100%;background:#00e676"></div></div>
+            </div>
+            <div class="score-detail-row">
+              <span class="score-detail-row__label">Head Stability</span>
+              <span id="comp-val-2" class="score-detail-row__value" style="color:#00e676">100%</span>
+              <div class="score-detail-row__bar"><div id="comp-bar-2" class="score-detail-row__bar-fill" style="width:100%;background:#00e676"></div></div>
+            </div>
+            <div class="score-detail-row">
+              <span class="score-detail-row__label">Yawn Frequency</span>
+              <span id="comp-val-3" class="score-detail-row__value" style="color:#00e676">100%</span>
+              <div class="score-detail-row__bar"><div id="comp-bar-3" class="score-detail-row__bar-fill" style="width:100%;background:#00e676"></div></div>
+            </div>
+            <div class="score-detail-row">
+              <span class="score-detail-row__label">Context (Time/Duration)</span>
+              <span id="comp-val-4" class="score-detail-row__value" style="color:#00e676">100%</span>
+              <div class="score-detail-row__bar"><div id="comp-bar-4" class="score-detail-row__bar-fill" style="width:100%;background:#00e676"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prediction -->
+        <div class="card prediction-panel">
+          <div id="prediction-icon" class="prediction__icon safe">✅</div>
+          <div class="prediction__text">
+            <div id="prediction-title" class="prediction__title">Looking Good</div>
+            <div id="prediction-desc" class="prediction__desc">No concerning fatigue trend detected.</div>
+          </div>
+          <div>
+            <div id="prediction-eta" class="prediction__eta">—</div>
+            <div id="prediction-eta-label" class="prediction__eta-label"></div>
+          </div>
+        </div>
+
+        <!-- Fatigue Timeline Chart -->
+        <div class="card" style="flex:1; display:flex; flex-direction:column;">
+          <div class="card__header">
+            <span class="card__title">Fatigue & Attention Timeline</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="fatigue-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Gaze Heatmap -->
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Gaze Attention Map</span>
+          </div>
+          <div class="heatmap-container">
+            <canvas id="heatmap-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── RIGHT: Alerts ─── -->
+      <div class="alert-panel">
+        <div class="card" style="flex:1; display:flex; flex-direction:column;">
+          <div class="card__header">
+            <span class="card__title">Alert Feed</span>
+            <span class="card__badge safe" id="alert-count-badge">
+              <span id="alert-count">0</span> alerts
+            </span>
+          </div>
+          <div id="alert-feed" class="alert-feed">
+            <div class="empty-state">
+              <div class="empty-state__icon">🛡️</div>
+              <div class="empty-state__text">No alerts yet. Monitoring...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Session Stats</span>
+          </div>
+          <div class="session-stats">
+            <div class="session-stat">
+              <div class="session-stat__label">Avg Score</div>
+              <div id="session-avg" class="session-stat__value" style="color:var(--success)">100</div>
+            </div>
+            <div class="session-stat">
+              <div class="session-stat__label">Min Score</div>
+              <div id="session-min" class="session-stat__value" style="color:var(--text-primary)">100</div>
+            </div>
+            <div class="session-stat">
+              <div class="session-stat__label">Warnings</div>
+              <div id="session-warnings" class="session-stat__value" style="color:var(--warning)">0</div>
+            </div>
+            <div class="session-stat">
+              <div class="session-stat__label">Critical</div>
+              <div id="session-critical" class="session-stat__value" style="color:var(--danger)">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ BOTTOM BAR ═══════ -->
+    <div class="bottom-bar">
+      <div class="trip-stats">
+        <div class="trip-stat">
+          <span class="trip-stat__icon">⏱️</span>
+          <div>
+            <div class="trip-stat__label">Duration</div>
+            <div id="trip-elapsed" class="trip-stat__value">00:00:00</div>
+          </div>
+        </div>
+        <div class="trip-stat">
+          <span class="trip-stat__icon">📍</span>
+          <div>
+            <div class="trip-stat__label">Distance</div>
+            <div id="trip-distance" class="trip-stat__value">0.0 km</div>
+          </div>
+        </div>
+        <div class="trip-stat">
+          <span class="trip-stat__icon">🏎️</span>
+          <div>
+            <div class="trip-stat__label">Speed</div>
+            <div id="trip-speed" class="trip-stat__value">0 km/h</div>
+          </div>
+        </div>
+        <div class="trip-stat">
+          <span class="trip-stat__icon">📊</span>
+          <div>
+            <div class="trip-stat__label">Avg Score</div>
+            <div id="trip-avg-score" class="trip-stat__value">100</div>
+          </div>
+        </div>
+      </div>
+      <div class="powered-by">
+        Powered by <span>DriveSense AI</span> · openpilot-compatible · v1.0
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ CRITICAL OVERLAY ═══════ -->
+  <div id="critical-overlay" class="critical-overlay">
+    <div class="critical-overlay__content">
+      <div class="critical-overlay__text">⚠ PULL OVER</div>
+      <div class="critical-overlay__sub">Severe drowsiness detected — you are not safe to drive</div>
+      <button id="critical-dismiss" class="critical-overlay__dismiss">I'm Alert — Dismiss</button>
+    </div>
+  </div>
+
+  <!-- ═══════ TOAST CONTAINER ═══════ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ═══════ SCRIPTS ═══════ -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="config/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/ai-engine.js"></script>
+  <script src="js/simulation.js"></script>
+  <script src="js/vision.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
